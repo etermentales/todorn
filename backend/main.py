@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -21,10 +21,7 @@ class Todo(BaseModel):
     id: int
     item: str
 
-todo_list = [
-    Todo(id=1, item="Learn FastAPI"),
-    Todo(id=2, item="Build a React frontend"),
-]
+todos = {}
 
 
 @app.get("/")
@@ -34,10 +31,28 @@ def read_root():
 @app.get("/todos", response_model=List[Todo])
 def get_todos():
     """Returns the entire list of to-dos."""
-    return todo_list
+    return list(todos.values())
 
-@app.post("/todos", response_model=List[Todo])
+@app.post("/todos", response_model=Todo)
 def add_todo(todo: Todo):
     """Adds a new to-do item to the list."""
-    todo_list.append(todo)
-    return todo_list
+    todos[todo.id] = todo
+    return todo
+
+@app.put("/todos/{todo_id}", response_model=Todo)
+def update_todo(todo_id: int, todo: Todo):
+    """Updates a to-do item from the list."""
+    if todo_id not in todos:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    if todo_id != todo.id:
+        raise HTTPException(status_code=400, detail='Id mismatch')
+    todos[todo_id] = todo
+    return todos[todo_id]
+    
+@app.delete("/todos/{todo_id}")
+def delete_todo(todo_id: int):
+    """Deletes a to-do item from the list."""
+    if todo_id not in todos:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    del todos[todo_id]
+
